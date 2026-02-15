@@ -66,6 +66,6 @@ async def get_repos():
             repos.extend(response.json())
 
     for index, item in enumerate(repos):
-        dic[item['name']] = item['url']
+        dic[item['name']] = item
 
     return dic
