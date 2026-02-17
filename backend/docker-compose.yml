@@ -8,11 +8,5 @@ services:
       - .:/app
     env_file:
       - .env
-    depends_on:
-      - db
-  
-  db:
-    image: postgres:17
-    env_file:
-      - .env
+
       
