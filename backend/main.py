@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Response
 from fastapi.responses import RedirectResponse
 from httpx import AsyncClient
+from typing import List
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -71,27 +73,42 @@ async def get_repos():
     return dic
 
 
-@app.get('/repo-tree')
-async def get_repo_tree(owner:str, repo:str, branch_name:str="main"):
+class RepoRequest(BaseModel):
+    owner: str
+    repos: List
+
+@app.post('/get-dep-files')
+async def get_repo_tree(body: RepoRequest):
     headers = {
         'Accept': 'application/vnd.github+json',
         'Authorization': f'Bearer {access_token}'
     }
-    
-    async with AsyncClient() as client:
-        print(owner, repo)
-        response = await client.get(f'https://api.github.com/repos/{owner}/{repo}/git/trees/main?recursive=1', headers=headers)
-    res = response.json()
-    tree = res.get("tree")
-    
-    for item in tree:
-        if item.get("path") == "requirements.txt":
-            url = item.get("url")
-            async with AsyncClient() as client:
-                response = await client.get(url=url, headers=headers)
-            res = response.json()
-            content = base64.b64decode(res.get('content')).decode('utf-8')
-            return content
+    returned_repo_list = []
+    print(f"bodies: {body}")
+    for repo in body.repos:
+        async with AsyncClient() as client:
+            repo_response = await client.get(f'https://api.github.com/repos/{body.owner}/{repo}', headers=headers)
+            default_branch = repo_response.json().get('default_branch', 'main')
+            response = await client.get(f'https://api.github.com/repos/{body.owner}/{repo}/git/trees/{default_branch}?recursive=1', headers=headers)
+        res = response.json()
+        tree = res.get("tree")
+        
+        if not tree:
+            continue
+        
+        for item in tree:
+            if item.get("path") == "requirements.txt":
+                url = item.get("url")
+                async with AsyncClient() as client:
+                    response = await client.get(url=url, headers=headers)
+                    
+                res_json = response.json()
+                content = base64.b64decode(res_json.get('content')).decode('utf-8')
+                
+                returned_repo_object = {
+                    "name": repo,
+                    "content": content
+                }
+                returned_repo_list.append(returned_repo_object)
 
-
-# @app.ge
+    return returned_repo_list
