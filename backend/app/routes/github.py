@@ -63,6 +63,7 @@ async def get_repos(settings: Settings = Depends(get_settings)):
     return dic
 
 
+
 @router.post("/dep-files", response_model=List[DependencyFile])
 async def get_repo_tree(body: GithubRepoRequest, settings: Settings = Depends(get_settings)):
     headers = {
@@ -83,13 +84,13 @@ async def get_repo_tree(body: GithubRepoRequest, settings: Settings = Depends(ge
             continue
         
         for item in tree:
-            if item.get("path") == "requirements.txt":
+            if "requirements.txt" in item.get("path"):
                 url = item.get("url")
                 async with AsyncClient() as client:
                     response = await client.get(url=url, headers=headers)
                     
                 res_json = response.json()
                 content = base64.b64decode(res_json.get("content")).decode("utf-8")
-                returned_repo_list.append(DependencyFile(repo=repo, content=content))
+                returned_repo_list.append(DependencyFile(name=repo, content=content))
 
     return returned_repo_list

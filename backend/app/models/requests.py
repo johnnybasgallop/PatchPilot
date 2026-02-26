@@ -7,10 +7,12 @@ class Language(str, Enum):
     JAVASCRIPT = "javascript"
 
 class GithubRepoRequest(BaseModel):
+    # token: str
     owner: str
     repos: List[str]
     
 class VulnerabilityRequest(BaseModel):
+    # token: str
     package_list : List[str]
     language : Language
     
